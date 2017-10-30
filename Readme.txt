@@ -1,0 +1,3 @@
+Manually update here: chrome://extensions/
+
+Otherwise the debugging won't work for some weird reason...
