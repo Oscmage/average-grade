@@ -110,8 +110,6 @@ function init() {
 
 init();
 
-console.log("Your average grade is: " + getAverageGrade());
-
 chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
   switch (message.type) {
     case "getAverageGrade":
