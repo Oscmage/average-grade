@@ -12,7 +12,10 @@
   "permissions": ["tabs", "https://student.portal.chalmers.se/*"],
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "https://student.portal.chalmers.se/sv/chalmersstudier/minaresultatochintyg/Sidor/Avslutadekurser.aspx",
+        "https://student.portal.chalmers.se/en/chalmersstudies/courseinformation/Pages/PassedCourses.aspx"
+      ],
       "js": ["myscript.js"]
     }
   ]
