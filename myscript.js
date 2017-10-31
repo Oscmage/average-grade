@@ -31,8 +31,6 @@ var addCheckboxesForProgram = () => {
   }
 };
 
-addCheckboxesForProgram();
-
 function addCheckboxesForCourses() {
   for (var i = 0; i < tables.length; i++) {
     var trArray = tables[i].children[1].children;
@@ -107,6 +105,7 @@ function getAverageGrade() {
 
 function init() {
   addCheckboxesForCourses();
+  addCheckboxesForProgram();
 }
 
 init();
