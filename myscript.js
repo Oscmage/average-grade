@@ -1,119 +1,157 @@
-var bigTable = document.getElementsByClassName("table-responsive");
+class CheckBoxHandler {
+  static addCheckboxes() {
+    const courseContainerList = document.getElementsByTagName(
+      "ladok-avslutad-kurs"
+    );
 
-var tables = document.getElementsByClassName("table-bordered");
-
-var addCheckboxesForProgram = () => {
-  for (let i = 0; i < tables.length; i++) {
-    const trArray = tables[i].children[0].children[0];
-    const sp2 = trArray.children[0];
-
-    const sp1 = document.createElement("input");
-    sp1.type = "checkbox";
-    sp1.checked = true;
-    sp1.class = "id";
-
-    // Get a reference to the parent element
-    const parentTr = sp2.parentNode;
-
-    // Insert the new element into the DOM before sp2
-    parentTr.insertBefore(sp1, sp2);
-
-    sp1.addEventListener("click", evt => {
-      const toElement = evt.toElement;
-      const relatedCheckboxes = tables[i].children[1].getElementsByTagName(
-        "input"
-      );
-
-      for (let j = 0; j < relatedCheckboxes.length; j++) {
-        relatedCheckboxes[j].checked = toElement.checked;
-      }
-    });
+    for (let i = 0; i < courseContainerList.length; i++) {
+      const cardBody = courseContainerList
+        .item(i)
+        .getElementsByClassName("card-body")[0];
+      this._addCheckbox(cardBody);
+    }
   }
+
+  static _addCheckbox(cardBody) {
+    let checkBox = document.createElement("INPUT");
+    checkBox.setAttribute("type", "checkbox");
+    checkBox.setAttribute("class", "average-grade-checkbox");
+    checkBox.checked = true;
+    cardBody.appendChild(checkBox);
+  }
+
+  static isMarked(cardBody) {
+    const checkBox = cardBody.getElementsByClassName(
+      "average-grade-checkbox"
+    )[0];
+    return checkBox.checked;
+  }
+}
+
+// Retrives the average grade for the courses.
+// Formula used for calculating the average grade: sum(hp * grade)/sum(hp)
+var getAverageGrade = function() {
+  let sumHpTimeGrade = 0;
+  let totalHp = 0;
+  // All courses as their squared box
+  const courseContainerList = document.getElementsByTagName(
+    "ladok-avslutad-kurs"
+  );
+  for (let i = 0; i < courseContainerList.length; i++) {
+    const cardBody = courseContainerList
+      .item(i)
+      .getElementsByClassName("card-body")[0];
+    let obj = getHpAndGrade(cardBody);
+    totalHp += obj.hp;
+    sumHpTimeGrade += obj.hp * obj.grade;
+  }
+  return totalHp === 0
+    ? "You need to pick courses to get a value..."
+    : sumHpTimeGrade / totalHp;
 };
 
-function addCheckboxesForCourses() {
-  for (var i = 0; i < tables.length; i++) {
-    var trArray = tables[i].children[1].children;
-    for (var j = 0; j < trArray.length; j++) {
-      var tr = trArray[j];
-      var trChildren = tr.children;
-
-      var sp1 = document.createElement("input");
-      sp1.type = "checkbox";
-      sp1.checked = true;
-      sp1.class = "id";
-
-      // Get a reference to the element, before we want to insert the element
-      var sp2 = trChildren[0];
-      // Get a reference to the parent element
-      var parentTr = sp2.parentNode;
-
-      // Insert the new element into the DOM before sp2
-      parentTr.insertBefore(sp1, sp2);
-    }
+// Retrives the hp and grade for a course.
+var getHpAndGrade = function(cardBody) {
+  if (!CheckBoxHandler.isMarked(cardBody)) {
+    return { grade: 0, hp: 0 };
   }
-}
-
-function getAllCourses() {
-  var allCourses = new Array();
-  // Loop through the seperate tables to get all allCourses for calculation.
-  for (var x = 0; x < tables.length; x++) {
-    var allCourses = [].concat.apply(
-      allCourses,
-      tables[x].getElementsByTagName("tbody")[0].getElementsByTagName("tr")
-    );
+  const hpStr = getHpStr(cardBody);
+  // There might be things like teknisk basår which should not be counted.
+  if (hpStr.indexOf("fup") !== -1) {
+    return { grade: 0, hp: 0 };
   }
-  return allCourses;
-}
+  const hp = parseFloat(hpStr);
 
-function getCheckedCourses() {
-  var allCourses = getAllCourses();
-
-  // Within each table loop through the allCourses and calculate the total grade times points.
-  for (var i = 0; i < allCourses.length; i++) {
-    var inputField = allCourses[i].getElementsByTagName("input")[0];
-    var course = allCourses[i].cells;
-
-    if (inputField.checked === false) {
-      allCourses.splice(i, 1); // Remove the elements, it should not affect the whole calculation.
-    }
+  // Grade found after ':' the +1 is because the index is inclusive
+  const gradeStr = getGradeStr(cardBody);
+  // If you have a grade of G that should not be counted in to the end result.
+  if (gradeStr.indexOf("G") !== -1) {
+    return { grade: 0, hp: 0 };
   }
+  const grade = parseInt(gradeStr);
+  return { grade, hp };
+};
 
-  return allCourses;
-}
+// Retrieves the hp str from a cardbody html object.
+var getHpStr = function(cardBody) {
+  const desktopElem = cardBody.getElementsByClassName("ldk-visa-desktop")[0];
+  const linkElem = desktopElem.getElementsByTagName("a")[0];
+  const courseInfo = linkElem.textContent;
+  const firstSplitterIdx = courseInfo.indexOf("|");
+  const secondSplitterIdx = courseInfo.lastIndexOf("|");
+  // HP found in between '|' the + 1 is because the index is inclusive
+  const hpStr = courseInfo
+    .substring(firstSplitterIdx + 1, secondSplitterIdx)
+    .replace("hp", "")
+    .trim();
+  return hpStr;
+};
 
-function getAverageGrade() {
-  var tot = 0;
-  var totalCredits = 0;
+// Retrieves the grade string from a cardbody html object
+var getGradeStr = function(cardBody) {
+  const strongElem = cardBody.getElementsByTagName("strong")[0];
+  const gradeInfo = strongElem.textContent;
+  const gradeColonIdx = gradeInfo.indexOf(":");
+  // Grade found after ':' the +1 is because the index is inclusive
+  const gradeStr = gradeInfo.substring(gradeColonIdx + 1).trim();
+  return gradeStr;
+};
 
-  var checkedCourses = getCheckedCourses();
-
-  for (var i = 0; i < checkedCourses.length; i++) {
-    var course = checkedCourses[i].cells;
-    if (course[3].outerText === "G") {
-      checkedCourses.splice(i, 1); // Remove the elements, it should not affect the whole calculation.
-    } else {
-      var grade = parseFloat(course[3].outerText.replace(",", "."));
-      var credits = parseFloat(course[2].outerText.replace(",", "."));
-
-      totalCredits = totalCredits + credits;
-      tot = tot + grade * credits;
-    }
-  }
-  return tot / totalCredits;
-}
-
-function init() {
-  addCheckboxesForCourses();
-  addCheckboxesForProgram();
-}
-
-init();
-
-chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
-  switch (message.type) {
+// Message handling from popup.js
+chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+  switch (request.type) {
     case "getAverageGrade":
-      sendResponse(getAverageGrade());
+      sendResponse({ average: getAverageGrade() });
       break;
   }
 });
+
+// Observes the dom for changes to "ladok-avslutade-kurser" and then updates the last mutationTime
+class Observer {
+  constructor() {
+    this.config = { attributes: false, childList: true, subtree: true };
+    this.targetNode = document.getElementsByTagName(
+      "ladok-avslutade-kurser"
+    )[0];
+    this.lastMutationTime = null;
+    this.observer = null;
+  }
+  start() {
+    this.observer = new MutationObserver(mut => {
+      this.lastMutationTime = new Date();
+    });
+    this.observer.observe(this.targetNode, this.config);
+  }
+  stop() {
+    if (this.observer !== null) {
+      this.observer.disconnect();
+    }
+  }
+  getLastMutationTime() {
+    if (this.lastMutationTime === null) {
+      return null;
+    } else {
+      return this.lastMutationTime.getTime();
+    }
+  }
+}
+
+// Startup
+function init() {
+  const obs = new Observer();
+  obs.start();
+  let interval = setInterval(function() {
+    lastMutationTime = obs.getLastMutationTime();
+    if (
+      lastMutationTime !== null &&
+      lastMutationTime < new Date().getTime() - 100
+    ) {
+      obs.stop();
+      clearInterval(interval);
+      // Add the checkboxes since the dom is now loaded.
+      CheckBoxHandler.addCheckboxes();
+    }
+  }, 100);
+}
+
+init();

@@ -1,21 +1,16 @@
 {
   "manifest_version": 2,
-
   "name": "Oscmage Average Grade",
   "description": "This extension will calculate your average grade",
   "version": "1.0",
-
   "browser_action": {
     "default_icon": "icon.png",
     "default_popup": "popup.html"
   },
-  "permissions": ["tabs"],
+  "permissions": ["activeTab"],
   "content_scripts": [
     {
-      "matches": [
-        "https://student.portal.chalmers.se/sv/chalmersstudier/minaresultatochintyg/Sidor/Avslutadekurser.aspx",
-        "https://student.portal.chalmers.se/en/chalmersstudies/courseinformation/Pages/PassedCourses.aspx"
-      ],
+      "matches": ["https://www.student.ladok.se/*"],
       "js": ["myscript.js"]
     }
   ]
