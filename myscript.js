@@ -31,7 +31,7 @@ class CheckBoxHandler {
 // Retrives the average grade for the courses.
 // Formula used for calculating the average grade: sum(hp * grade)/sum(hp)
 var getAverageGrade = function() {
-  let sumHpTimeGrade = 0;
+  let sumHpTimesGrade = 0;
   let totalHp = 0;
   // All courses as their squared box
   const courseContainerList = document.getElementsByTagName(
@@ -43,11 +43,11 @@ var getAverageGrade = function() {
       .getElementsByClassName("card-body")[0];
     let obj = getHpAndGrade(cardBody);
     totalHp += obj.hp;
-    sumHpTimeGrade += obj.hp * obj.grade;
+    sumHpTimesGrade += obj.hp * obj.grade;
   }
   return totalHp === 0
     ? "You need to pick courses to get a value..."
-    : sumHpTimeGrade / totalHp;
+    : sumHpTimesGrade / totalHp;
 };
 
 // Retrives the hp and grade for a course.
@@ -57,7 +57,7 @@ var getHpAndGrade = function(cardBody) {
   }
   const hpStr = getHpStr(cardBody);
   // There might be things like teknisk basår which should not be counted.
-  if (hpStr.indexOf("fup") !== -1) {
+  if (hpStr === null) {
     return { grade: 0, hp: 0 };
   }
   const hp = parseFloat(hpStr);
@@ -65,7 +65,7 @@ var getHpAndGrade = function(cardBody) {
   // Grade found after ':' the +1 is because the index is inclusive
   const gradeStr = getGradeStr(cardBody);
   // If you have a grade of G that should not be counted in to the end result.
-  if (gradeStr.indexOf("G") !== -1) {
+  if (["3", "4", "5"].indexOf(gradeStr) === -1) {
     return { grade: 0, hp: 0 };
   }
   const grade = parseInt(gradeStr);
@@ -80,11 +80,11 @@ var getHpStr = function(cardBody) {
   const firstSplitterIdx = courseInfo.indexOf("|");
   const secondSplitterIdx = courseInfo.lastIndexOf("|");
   // HP found in between '|' the + 1 is because the index is inclusive
-  const hpStr = courseInfo
-    .substring(firstSplitterIdx + 1, secondSplitterIdx)
-    .replace("hp", "")
-    .trim();
-  return hpStr;
+  let hpStr = courseInfo.substring(firstSplitterIdx + 1, secondSplitterIdx);
+  if (hpStr.indexOf("hp") === -1) {
+    return null;
+  }
+  return hpStr.replace("hp", "").trim();
 };
 
 // Retrieves the grade string from a cardbody html object
@@ -97,22 +97,16 @@ var getGradeStr = function(cardBody) {
   return gradeStr;
 };
 
-// Message handling from popup.js
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-  switch (request.type) {
-    case "getAverageGrade":
-      sendResponse({ average: getAverageGrade() });
-      break;
-  }
-});
-
 // Observes the dom for changes to "ladok-avslutade-kurser" and then updates the last mutationTime
 class Observer {
   constructor() {
-    this.config = { attributes: false, childList: true, subtree: true };
-    this.targetNode = document.getElementsByTagName(
-      "ladok-avslutade-kurser"
-    )[0];
+    this.config = {
+      attributes: true,
+      childList: true,
+      subtree: true,
+      characterData: true
+    };
+    this.targetNode = document.getElementsByTagName("ng-component")[0];
     this.lastMutationTime = null;
     this.observer = null;
   }
@@ -151,7 +145,27 @@ function init() {
       // Add the checkboxes since the dom is now loaded.
       CheckBoxHandler.addCheckboxes();
     }
-  }, 100);
+  }, 200);
 }
 
-init();
+if (performance.navigation.type == 1) {
+  init();
+}
+
+// Message handling from popup.js and background.js
+chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+  switch (request.type) {
+    case "getAverageGrade":
+      sendResponse({ average: getAverageGrade() });
+      break;
+    case "urlChange":
+      urlHandler(request.url);
+      break;
+  }
+});
+
+var urlHandler = function(url) {
+  if (url === "https://www.student.ladok.se/student/#/avslutade") {
+    init();
+  }
+};
